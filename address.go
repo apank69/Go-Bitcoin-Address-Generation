@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/rand"
 	"crypto/sha256"
 	"fmt"
 	"github.com/btcsuite/btcutil/base58"
@@ -10,7 +9,10 @@ import (
 )
 
 func main() {
-	_, x, y, err := secp256k1.GenerateKey(rand.Reader)
+	privKey, err := secp256k1.GeneratePrivateKey()
+	pubkey := privKey.PubKey()
+	x := pubkey.X()
+	y := pubkey.Y()
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -30,7 +32,9 @@ func main() {
 	checksum := generateChecksum(publicKeyHash)
 	publicKeyHash = append(publicKeyHash, checksum...)
 	address := base58.Encode(publicKeyHash)
-	fmt.Println(address)
+	fmt.Println("Private Key:", generateWIF(privKey.Key))
+	fmt.Println(privKey.Key)
+	fmt.Println("Address:", address)
 }
 
 func generateChecksum(keyHash []byte) []byte {
@@ -38,4 +42,14 @@ func generateChecksum(keyHash []byte) []byte {
 	firstHashSlice := firstHash[:]
 	doubleHash := sha256.Sum256(firstHashSlice)
 	return doubleHash[0:4]
+}
+
+func generateWIF(privkey secp256k1.ModNScalar) string {
+	privkeySlice := privkey.Bytes()
+	joined := []byte{}
+	joined = append([]byte{0x80}, privkeySlice[:]...)
+	checksum := generateChecksum(joined)
+	joined = append(joined, checksum...)
+	WIF := base58.Encode(joined)
+	return WIF
 }
